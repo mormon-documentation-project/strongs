@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+
+const {
+	readFileSync,
+	writeFileSync,
+} = require('fs');
+
+const {cyan, green} = require('chalk');
+
+const cli = require('sade')('strongs');
+
+const saveAs = require('./lib/save-as');
+
+cli
+	.command('convert')
+	.describe('')
+	.option('-t, --type <fileType>', 'The output file type', 'all')
+	.option('-l, --lang', 'Which language to convert', 'both')
+	.action(function({type, lang}) {
+		const data = {};
+		lang = lang.trim().toLowerCase();
+
+		if (['both', 'hebrew', 'heb', 'h'].includes(lang)) {
+			data.hebrew = importData('hebrew');
+		}
+
+		if (['both', 'greek', 'gr', 'g'].includes(lang)) {
+			data.greek = importData('greek');
+		}
+
+		console.log(green('Converting...'));
+
+		(saveAs[type] || saveAs.all)(data);
+
+		console.log(green('DONE!'));
+	});
+
+cli.parse(process.argv);
+
+function importData(lang) {
+	const { camelCase } = require('change-case');
+
+	const js = readFileSync(require.resolve(`strongs/${lang}/strongs-${lang}-dictionary`), 'utf8');
+
+	return new Function(`
+		${js}
+
+		return ${camelCase(['strongs', lang, 'dictionary'])};
+	`)();
+}
